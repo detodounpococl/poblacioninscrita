@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Población Inscrita – CESFAM Violeta Parra</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --accent: #1f9cf0;
+    --accent2: #3fb950;
+    --accent3: #f78166;
+    --accent4: #d2a8ff;
+    --accent5: #ffa657;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --hombre: #58a6ff;
+    --mujer: #f778ba;
+    --extran: #ffa657;
+    --intersex: #3fb950;
+    --total: #d2a8ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .header-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), #7c3aed);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .header-info h1 {
+    font-size: 17px; font-weight: 700; color: var(--text);
+    letter-spacing: -0.3px;
+  }
+  .header-info p {
+    font-size: 12px; color: var(--text2); margin-top: 2px;
+  }
+  .header-badge {
+    margin-left: auto;
+    background: rgba(31,156,240,0.12);
+    border: 1px solid rgba(31,156,240,0.3);
+    color: var(--accent);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* KPI ROW */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding: 20px 32px 0;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--kpi-color, var(--accent));
+  }
+  .kpi:hover { border-color: var(--kpi-color, var(--accent)); }
+  .kpi-label {
+    font-size: 11px; color: var(--text2); text-transform: uppercase;
+    letter-spacing: 0.8px; font-weight: 600;
+  }
+  .kpi-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 28px; font-weight: 700;
+    color: var(--text); margin-top: 6px;
+    letter-spacing: -1px;
+  }
+  .kpi-sub {
+    font-size: 11px; color: var(--text3); margin-top: 4px;
+  }
+
+  /* TABS */
+  .tabs-bar {
+    display: flex; gap: 4px;
+    padding: 20px 32px 0;
+  }
+  .tab-btn {
+    background: none; border: 1px solid transparent;
+    color: var(--text2); padding: 8px 18px;
+    border-radius: 8px; cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tab-btn:hover { background: var(--surface2); color: var(--text); }
+  .tab-btn.active {
+    background: var(--surface);
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .tab-icon { font-size: 15px; }
+
+  /* CONTENT */
+  .content { padding: 16px 32px 32px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* SECTION HEADER */
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 15px; font-weight: 700; color: var(--text);
+  }
+  .section-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+  /* AGE GROUP SELECTOR */
+  .selector-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+  }
+  .selector-box label {
+    font-size: 12px; color: var(--text2); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    display: block; margin-bottom: 10px;
+  }
+  .age-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 12px;
+  }
+  .age-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 5px 12px; border-radius: 20px;
+    cursor: pointer; font-size: 12px; font-weight: 500;
+    transition: all 0.15s; user-select: none;
+  }
+  .age-chip:hover { border-color: var(--accent); color: var(--text); }
+  .age-chip.selected {
+    background: rgba(31,156,240,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .quick-btns {
+    display: flex; gap: 8px;
+  }
+  .quick-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2); padding: 5px 14px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .quick-btn:hover { background: var(--border); color: var(--text); }
+
+  /* RESULTS TABLE */
+  .table-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden; margin-bottom: 16px;
+  }
+  .table-total-bar {
+    background: rgba(31,156,240,0.08);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+  }
+  .total-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  thead th {
+    padding: 10px 14px; text-align: right;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text2); border-bottom: 1px solid var(--border);
+  }
+  thead th:first-child { text-align: left; }
+  tbody tr { border-bottom: 1px solid rgba(48,54,61,0.5); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td {
+    padding: 9px 14px; text-align: right;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+  tbody td:first-child {
+    text-align: left; font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600; color: var(--text); font-size: 13px;
+  }
+  .num-hombre { color: var(--hombre); }
+  .num-mujer  { color: var(--mujer); }
+  .num-extran { color: var(--extran); }
+  .num-intersex { color: var(--intersex); }
+  .num-total  { color: var(--text); font-weight: 700; }
+  tfoot td {
+    padding: 10px 14px; text-align: right;
+    font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 700;
+    background: var(--surface2);
+    border-top: 2px solid var(--border);
+    color: var(--text);
+  }
+  tfoot td:first-child { text-align: left; font-family: 'IBM Plex Sans', sans-serif; }
+
+  /* CHART */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .chart-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .chart-box.full { grid-column: 1 / -1; }
+  .chart-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+  .chart-canvas { height: 240px; }
+  .chart-canvas-tall { height: 300px; }
+  .chart-canvas-sm { height: 180px; }
+
+  /* SECTOR TABLE */
+  .sector-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+  }
+  .sector-row:last-child { border-bottom: none; }
+  .sector-name { width: 240px; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .sector-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .sector-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .sector-num {
+    width: 70px; text-align: right;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600;
+  }
+  .sector-pct {
+    width: 50px; text-align: right;
+    font-size: 11px; color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  .leg-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+  .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* NATIONALITY TABLE */
+  .nat-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+  .nat-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px; border-bottom: 1px solid rgba(48,54,61,0.4);
+  }
+  .nat-item:last-child { border-bottom: none; }
+  .nat-rank {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace; flex-shrink: 0;
+  }
+  .nat-rank.top3 { background: rgba(31,156,240,0.15); border-color: var(--accent); color: var(--accent); }
+  .nat-name { flex: 1; font-size: 13px; font-weight: 600; }
+  .nat-bar-wrap { width: 90px; height: 4px; background: var(--surface2); border-radius: 2px; }
+  .nat-bar { height: 100%; border-radius: 2px; background: var(--extran); }
+  .nat-num { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; color: var(--extran); width: 50px; text-align: right; }
+
+  /* NO DATA */
+  .no-data {
+    text-align: center; padding: 32px;
+    color: var(--text3); font-size: 13px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .chart-grid { grid-template-columns: 1fr; }
+    .nat-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-icon">🏥</div>
+  <div class="header-info">
+    <h1>CESFAM Violeta Parra · Dashboard Población Inscrita</h1>
+    <p>S.S. Ñuble · Chillán · Corte: Febrero 2026 · Datos agregados — sin información individual</p>
+  </div>
+  <div class="header-badge">CONFIDENCIAL</div>
+</header>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi" style="--kpi-color: var(--accent)">
+    <div class="kpi-label">Total Inscritos</div>
+    <div class="kpi-value">52.627</div>
+    <div class="kpi-sub">Activos · Todos los sectores</div>
+  </div>
+  <div class="kpi" style="--kpi-color: var(--hombre)">
+    <div class="kpi-label">Hombres</div>
+    <div class="kpi-value" id="kpi-hombres">22.622</div>
+    <div class="kpi-sub">43,0% del total</div>
+  </div>
+  <div class="kpi" style="--kpi-color: var(--mujer)">
+    <div class="kpi-label">Mujeres</div>
+    <div class="kpi-value" id="kpi-mujeres">29.995</div>
+    <div class="kpi-sub">57,0% del total</div>
+  </div>
+  <div class="kpi" style="--kpi-color: var(--extran)">
+    <div class="kpi-label">Extranjeros</div>
+    <div class="kpi-value">3.303</div>
+    <div class="kpi-sub">6,3% del total inscrito</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('edad')">
+    <span class="tab-icon">📊</span> Grupos de Edad
+  </button>
+  <button class="tab-btn" onclick="switchTab('sector')">
+    <span class="tab-icon">🗺️</span> Por Sector
+  </button>
+  <button class="tab-btn" onclick="switchTab('extran')">
+    <span class="tab-icon">🌍</span> Población Extranjera
+  </button>
+</div>
+
+<div class="content">
+
+  <!-- TAB 1: EDAD -->
+  <div class="tab-panel active" id="tab-edad">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Distribución por Grupo de Edad</div>
+        <div class="section-sub">Seleccione los grupos de edad para generar el resumen</div>
+      </div>
+    </div>
+
+    <div class="selector-box">
+      <label>Grupos de Edad — haga clic para seleccionar/deseleccionar</label>
+      <div class="age-chips" id="age-chips"></div>
+      <div class="quick-btns">
+        <button class="quick-btn" onclick="selectAll()">Todos</button>
+        <button class="quick-btn" onclick="selectNone()">Ninguno</button>
+        <button class="quick-btn" onclick="selectGroup('menores')">≤ 5 Años</button>
+        <button class="quick-btn" onclick="selectGroup('escolar')">Escolares (6–14)</button>
+        <button class="quick-btn" onclick="selectGroup('adulto')">Adultos (25–64)</button>
+        <button class="quick-btn" onclick="selectGroup('mayor')">Adultos Mayores (65+)</button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="table-total-bar" id="total-bar"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Grupo de Edad</th>
+            <th style="color:var(--hombre)">Hombre</th>
+            <th style="color:var(--mujer)">Mujer</th>
+            <th style="color:var(--extran)">Extranjero</th>
+            <th style="color:var(--intersex)">Intersex</th>
+            <th>Total</th>
+            <th>% del Total</th>
+          </tr>
+        </thead>
+        <tbody id="age-tbody"></tbody>
+        <tfoot id="age-tfoot"></tfoot>
+      </table>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Pirámide Poblacional (selección)</div>
+        <div class="chart-canvas"><canvas id="chartPiramide"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Composición por Sexo</div>
+        <div class="chart-canvas"><canvas id="chartPie"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: SECTOR -->
+  <div class="tab-panel" id="tab-sector">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Distribución por Sector</div>
+        <div class="section-sub">Total de inscritos activos por sector territorial</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box full">
+        <div class="chart-title">Inscritos por Sector — Desglose Hombre / Mujer / Extranjero</div>
+        <div class="chart-canvas-tall"><canvas id="chartSectorBar"></canvas></div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div id="sector-table-content"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3: EXTRANJEROS -->
+  <div class="tab-panel" id="tab-extran">
+    <div class="section-head">
+      <div>
+        <div class="section-title">Población Extranjera Inscrita</div>
+        <div class="section-sub">3.303 inscritos extranjeros · 6,3% de la población total</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <div class="chart-title">Top 15 Nacionalidades</div>
+        <div style="height:320px"><canvas id="chartNat"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">Extranjeros por Sector</div>
+        <div style="height:320px"><canvas id="chartExtSector"></canvas></div>
+      </div>
+    </div>
+
+    <div class="nat-grid">
+      <div class="table-container">
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700;">
+          Ranking por Nacionalidad
+        </div>
+        <div id="nat-list"></div>
+      </div>
+      <div class="table-container">
+        <div style="padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; font-weight:700;">
+          Extranjeros por Sector
+        </div>
+        <div id="ext-sector-list"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ═══════════════════════════════════════════
+// EMBEDDED DATA
+// ═══════════════════════════════════════════
+const DATA = {
+  age_order: ["0-1 Mes","2-5 Meses","6-11 Meses","1 Año","2-5 Años","6-9 Años","10-14 Años","15-19 Años","20-24 Años","25-34 Años","35-44 Años","45-54 Años","55-64 Años","65-69 Años","70+ Años"],
+  age_groups: {
+    "0-1 Mes":     {Hombre:25,  Mujer:30,   Extranjero:0,   Intersex:0, "No Informado":0, Total:55},
+    "2-5 Meses":   {Hombre:55,  Mujer:44,   Extranjero:0,   Intersex:0, "No Informado":0, Total:99},
+    "6-11 Meses":  {Hombre:80,  Mujer:88,   Extranjero:1,   Intersex:0, "No Informado":0, Total:168},
+    "1 Año":       {Hombre:205, Mujer:178,  Extranjero:4,   Intersex:0, "No Informado":0, Total:383},
+    "2-5 Años":    {Hombre:920, Mujer:866,  Extranjero:67,  Intersex:0, "No Informado":0, Total:1786},
+    "6-9 Años":    {Hombre:1162,Mujer:1165, Extranjero:191, Intersex:1, "No Informado":2, Total:2330},
+    "10-14 Años":  {Hombre:1692,Mujer:1606, Extranjero:246, Intersex:0, "No Informado":0, Total:3298},
+    "15-19 Años":  {Hombre:1590,Mujer:1658, Extranjero:208, Intersex:1, "No Informado":0, Total:3249},
+    "20-24 Años":  {Hombre:1372,Mujer:1585, Extranjero:146, Intersex:0, "No Informado":1, Total:2958},
+    "25-34 Años":  {Hombre:3038,Mujer:4110, Extranjero:795, Intersex:0, "No Informado":1, Total:7149},
+    "35-44 Años":  {Hombre:2963,Mujer:4481, Extranjero:755, Intersex:1, "No Informado":1, Total:7446},
+    "45-54 Años":  {Hombre:2595,Mujer:3769, Extranjero:456, Intersex:1, "No Informado":0, Total:6365},
+    "55-64 Años":  {Hombre:2654,Mujer:3750, Extranjero:253, Intersex:0, "No Informado":1, Total:6405},
+    "65-69 Años":  {Hombre:1198,Mujer:1790, Extranjero:71,  Intersex:0, "No Informado":0, Total:2988},
+    "70+ Años":    {Hombre:3073,Mujer:4875, Extranjero:110, Intersex:0, "No Informado":0, Total:7948}
+  },
+  sectors: {
+    "Sector 1":    {total:10363, hombre:4403, mujer:5958, extranjero:774},
+    "Sector 2":    {total:10477, hombre:4376, mujer:6099, extranjero:523},
+    "Sector 3 (Cecof)": {total:5355, hombre:2347, mujer:3008, extranjero:467},
+    "Sector 4":    {total:13590, hombre:5655, mujer:7934, extranjero:867},
+    "Sector 5":    {total:6342,  hombre:2770, mujer:3569, extranjero:556},
+    "Sector 6":    {total:3203,  hombre:1482, mujer:1720, extranjero:19},
+    "Sector Rural":{total:1866,  hombre:843,  mujer:1023, extranjero:46},
+    "Sector Transversal":{total:47, hombre:28, mujer:19, extranjero:6},
+    "No Informado":{total:1384,  hombre:718,  mujer:665,  extranjero:45}
+  },
+  nationalities: [
+    {name:"Venezuela",  total:1936},
+    {name:"Haití",      total:397},
+    {name:"Colombia",   total:254},
+    {name:"Cuba",       total:166},
+    {name:"Perú",       total:153},
+    {name:"Ecuador",    total:95},
+    {name:"Bolivia",    total:52},
+    {name:"Argentina",  total:45},
+    {name:"Brasil",     total:27},
+    {name:"Rep. Dominicana", total:22},
+    {name:"China",      total:18},
+    {name:"México",     total:18},
+    {name:"España",     total:13},
+    {name:"Uruguay",    total:10},
+    {name:"Francia",    total:10}
+  ],
+  f_sector: {
+    "Sector 1":774, "Sector 2":523, "Sector 3 (Cecof)":467,
+    "Sector 4":867, "Sector 5":556, "Sector 6":19,
+    "Sector Rural":46, "Sector Transversal":6, "No Informado":45
+  },
+  total: 52627, total_extran: 3303
+};
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let selectedAges = new Set(DATA.age_order);
+let charts = {};
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+const fmt = n => n.toLocaleString('es-CL');
+const pct = (n, d) => d > 0 ? (n/d*100).toFixed(1)+'%' : '0.0%';
+const COLORS = {
+  hombre:'#58a6ff', mujer:'#f778ba', extran:'#ffa657',
+  intersex:'#3fb950', total:'#d2a8ff'
+};
+
+// ═══════════════════════════════════════════
+// TAB SWITCH
+// ═══════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (id === 'sector') renderSectorCharts();
+  if (id === 'extran') renderExtranCharts();
+}
+
+// ═══════════════════════════════════════════
+// AGE CHIPS
+// ═══════════════════════════════════════════
+function buildChips() {
+  const el = document.getElementById('age-chips');
+  el.innerHTML = '';
+  DATA.age_order.forEach(g => {
+    const ch = document.createElement('div');
+    ch.className = 'age-chip selected';
+    ch.textContent = g;
+    ch.dataset.group = g;
+    ch.onclick = () => toggleChip(g, ch);
+    el.appendChild(ch);
+  });
+}
+
+function toggleChip(g, el) {
+  if (selectedAges.has(g)) { selectedAges.delete(g); el.classList.remove('selected'); }
+  else { selectedAges.add(g); el.classList.add('selected'); }
+  renderAgeTable();
+}
+
+function selectAll() {
+  selectedAges = new Set(DATA.age_order);
+  document.querySelectorAll('.age-chip').forEach(c => c.classList.add('selected'));
+  renderAgeTable();
+}
+function selectNone() {
+  selectedAges.clear();
+  document.querySelectorAll('.age-chip').forEach(c => c.classList.remove('selected'));
+  renderAgeTable();
+}
+function selectGroup(g) {
+  const groups = {
+    menores: DATA.age_order.slice(0,5),
+    escolar: ['6-9 Años','10-14 Años'],
+    adulto:  ['25-34 Años','35-44 Años','45-54 Años','55-64 Años'],
+    mayor:   ['65-69 Años','70+ Años']
+  };
+  selectedAges = new Set(groups[g]);
+  document.querySelectorAll('.age-chip').forEach(c => {
+    c.classList.toggle('selected', selectedAges.has(c.dataset.group));
+  });
+  renderAgeTable();
+}
+
+// ═══════════════════════════════════════════
+// AGE TABLE + CHARTS
+// ═══════════════════════════════════════════
+function renderAgeTable() {
+  const sel = DATA.age_order.filter(g => selectedAges.has(g));
+  let totH=0, totM=0, totE=0, totI=0, totT=0;
+  const grand = DATA.total;
+
+  const tbody = document.getElementById('age-tbody');
+  tbody.innerHTML = '';
+
+  sel.forEach(g => {
+    const d = DATA.age_groups[g];
+    totH += d.Hombre; totM += d.Mujer; totE += d.Extranjero; totI += d.Intersex; totT += d.Total;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${g}</td>
+      <td class="num-hombre">${fmt(d.Hombre)}</td>
+      <td class="num-mujer">${fmt(d.Mujer)}</td>
+      <td class="num-extran">${fmt(d.Extranjero)}</td>
+      <td class="num-intersex">${d.Intersex||'–'}</td>
+      <td class="num-total">${fmt(d.Total)}</td>
+      <td style="color:var(--text2)">${pct(d.Total, grand)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (!sel.length) { tbody.innerHTML = '<tr><td colspan="7" class="no-data">Seleccione al menos un grupo de edad</td></tr>'; }
+
+  const tfoot = document.getElementById('age-tfoot');
+  tfoot.innerHTML = `<tr>
+    <td>TOTAL SELECCIÓN</td>
+    <td style="color:var(--hombre)">${fmt(totH)}</td>
+    <td style="color:var(--mujer)">${fmt(totM)}</td>
+    <td style="color:var(--extran)">${fmt(totE)}</td>
+    <td style="color:var(--intersex)">${totI||'–'}</td>
+    <td>${fmt(totT)}</td>
+    <td style="color:var(--text2)">${pct(totT, grand)}</td>
+  </tr>`;
+
+  // total bar
+  const bar = document.getElementById('total-bar');
+  bar.innerHTML = `
+    <div class="total-badge"><div class="dot" style="background:var(--accent)"></div><b>Total selección: ${fmt(totT)}</b></div>
+    <div class="total-badge"><div class="dot" style="background:var(--hombre)"></div>${fmt(totH)} H</div>
+    <div class="total-badge"><div class="dot" style="background:var(--mujer)"></div>${fmt(totM)} M</div>
+    <div class="total-badge"><div class="dot" style="background:var(--extran)"></div>${fmt(totE)} Ext.</div>
+    <div class="total-badge" style="margin-left:auto;color:var(--text2)">
+      ${pct(totT, grand)} del padrón total (${fmt(grand)})
+    </div>
+  `;
+
+  renderAgePiramide(sel);
+  renderPie(totH, totM, totE, totI);
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function renderAgePiramide(sel) {
+  destroyChart('piramide');
+  const canvas = document.getElementById('chartPiramide');
+  const hData = sel.map(g => -DATA.age_groups[g].Hombre);
+  const mData = sel.map(g => DATA.age_groups[g].Mujer);
+  charts.piramide = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: sel,
+      datasets: [
+        {label:'Hombre', data:hData, backgroundColor:'rgba(88,166,255,0.8)', borderRadius:3},
+        {label:'Mujer',  data:mData, backgroundColor:'rgba(247,120,186,0.8)', borderRadius:3}
+      ]
+    },
+    options: {
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales: {
+        x: {
+          grid:{color:'rgba(48,54,61,0.6)'}, ticks:{
+            color:'#8b949e', font:{size:10}, callback: v => fmt(Math.abs(v))
+          }
+        },
+        y: { grid:{display:false}, ticks:{color:'#8b949e', font:{size:10}} }
+      },
+      plugins: { legend:{labels:{color:'#8b949e', font:{size:11}}}, tooltip:{
+        callbacks:{label: ctx => `${ctx.dataset.label}: ${fmt(Math.abs(ctx.raw))}`}
+      }}
+    }
+  });
+}
+
+function renderPie(h, m, e, i) {
+  destroyChart('pie');
+  const canvas = document.getElementById('chartPie');
+  charts.pie = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels:['Hombre','Mujer','Extranjero','Intersex'],
+      datasets:[{
+        data:[h,m,e,i||0],
+        backgroundColor:['rgba(88,166,255,0.85)','rgba(247,120,186,0.85)','rgba(255,166,87,0.85)','rgba(63,185,80,0.85)'],
+        borderWidth:2, borderColor:'#161b22'
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{color:'#8b949e', font:{size:11}, padding:12}},
+        tooltip:{callbacks:{label: ctx => `${ctx.label}: ${fmt(ctx.raw)} (${(ctx.raw/(h+m+e+i)*100).toFixed(1)}%)`}}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// SECTOR
+// ═══════════════════════════════════════════
+function renderSectorCharts() {
+  const sec = Object.entries(DATA.sectors).sort((a,b) => b[1].total - a[1].total);
+  const labels = sec.map(s => s[0]);
+  const hData = sec.map(s => s[1].hombre);
+  const mData = sec.map(s => s[1].mujer);
+  const eData = sec.map(s => s[1].extranjero);
+
+  destroyChart('sectorBar');
+  charts.sectorBar = new Chart(document.getElementById('chartSectorBar'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Hombre',    data:hData, backgroundColor:'rgba(88,166,255,0.8)',  borderRadius:4},
+        {label:'Mujer',     data:mData, backgroundColor:'rgba(247,120,186,0.8)', borderRadius:4},
+        {label:'Extranjero',data:eData, backgroundColor:'rgba(255,166,87,0.8)',  borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{stacked:false, grid:{display:false}, ticks:{color:'#8b949e',font:{size:10}}},
+        y:{grid:{color:'rgba(48,54,61,0.6)'}, ticks:{color:'#8b949e', callback: v => fmt(v)}}
+      },
+      plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}, tooltip:{callbacks:{label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)}`}}}
+    }
+  });
+
+  // sector list
+  const maxT = Math.max(...sec.map(s => s[1].total));
+  const container = document.getElementById('sector-table-content');
+  container.innerHTML = '';
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:12px;font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;font-weight:700;';
+  header.innerHTML = `<div style="width:220px">Sector</div><div style="flex:1">Distribución</div><div style="width:70px;text-align:right">Total</div><div style="width:50px;text-align:right">%</div>`;
+  container.appendChild(header);
+
+  const sectorColors = ['#58a6ff','#3fb950','#ffa657','#f778ba','#d2a8ff','#79c0ff','#56d364','#e3b341'];
+  sec.forEach(([name, d], i) => {
+    const row = document.createElement('div');
+    row.className = 'sector-row';
+    const pctV = (d.total / DATA.total * 100).toFixed(1);
+    const barW = (d.total / maxT * 100).toFixed(1);
+    row.innerHTML = `
+      <div class="sector-name">${name}</div>
+      <div class="sector-bar-wrap"><div class="sector-bar" style="width:${barW}%;background:${sectorColors[i%sectorColors.length]}"></div></div>
+      <div class="sector-num" style="color:${sectorColors[i%sectorColors.length]}">${fmt(d.total)}</div>
+      <div class="sector-pct">${pctV}%</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════
+// EXTRANJEROS
+// ═══════════════════════════════════════════
+function renderExtranCharts() {
+  // NAT chart
+  destroyChart('nat');
+  const natLabels = DATA.nationalities.map(n => n.name);
+  const natData   = DATA.nationalities.map(n => n.total);
+  const maxN = natData[0];
+  charts.nat = new Chart(document.getElementById('chartNat'), {
+    type:'bar',
+    data:{
+      labels:natLabels,
+      datasets:[{
+        label:'Inscritos',
+        data:natData,
+        backgroundColor:natData.map((_,i) => i<3?'rgba(255,166,87,0.85)':'rgba(255,166,87,0.45)'),
+        borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{grid:{color:'rgba(48,54,61,0.6)'}, ticks:{color:'#8b949e',font:{size:10}, callback: v=>fmt(v)}},
+        y:{grid:{display:false}, ticks:{color:'#8b949e',font:{size:10}}}
+      },
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label: ctx => `${fmt(ctx.raw)} inscritos`}}}
+    }
+  });
+
+  // EXT SECTOR chart
+  destroyChart('extSector');
+  const esEntries = Object.entries(DATA.f_sector).sort((a,b) => b[1]-a[1]).filter(e => e[0] !== 'No Informado');
+  charts.extSector = new Chart(document.getElementById('chartExtSector'), {
+    type:'doughnut',
+    data:{
+      labels: esEntries.map(e => e[0]),
+      datasets:[{
+        data: esEntries.map(e => e[1]),
+        backgroundColor:['#58a6ff','#3fb950','#ffa657','#f778ba','#d2a8ff','#79c0ff','#56d364','#e3b341'],
+        borderWidth:2, borderColor:'#161b22'
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'right', labels:{color:'#8b949e', font:{size:10}, padding:8}},
+        tooltip:{callbacks:{label: ctx => `${ctx.label}: ${fmt(ctx.raw)} (${(ctx.raw/DATA.total_extran*100).toFixed(1)}%)`}}
+      }
+    }
+  });
+
+  // NAT LIST
+  const natList = document.getElementById('nat-list');
+  natList.innerHTML = '';
+  DATA.nationalities.forEach((n,i) => {
+    const el = document.createElement('div');
+    el.className = 'nat-item';
+    const barW = (n.total / maxN * 100).toFixed(1);
+    el.innerHTML = `
+      <div class="nat-rank${i<3?' top3':''}">${i+1}</div>
+      <div class="nat-name">${n.name}</div>
+      <div class="nat-bar-wrap"><div class="nat-bar" style="width:${barW}%"></div></div>
+      <div class="nat-num">${fmt(n.total)}</div>
+    `;
+    natList.appendChild(el);
+  });
+
+  // EXT SECTOR LIST
+  const extSecList = document.getElementById('ext-sector-list');
+  extSecList.innerHTML = '';
+  const maxES = Math.max(...Object.values(DATA.f_sector));
+  Object.entries(DATA.f_sector).sort((a,b) => b[1]-a[1]).forEach(([sec, n]) => {
+    const el = document.createElement('div');
+    el.className = 'nat-item';
+    const bw = (n / maxES * 100).toFixed(1);
+    el.innerHTML = `
+      <div class="nat-name">${sec}</div>
+      <div class="nat-bar-wrap"><div class="nat-bar" style="width:${bw}%;background:#58a6ff"></div></div>
+      <div class="nat-num" style="color:#58a6ff">${fmt(n)}</div>
+    `;
+    extSecList.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+buildChips();
+renderAgeTable();
+</script>
+</body>
+</html>
