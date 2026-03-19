@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Población Inscrita – CESFAM Violeta Parra</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
@@ -439,6 +440,11 @@
 
   <!-- STATUS -->
   <div id="filter-status-badge" class="filter-status-badge">Corte: 28/02/2026 · Todos los grupos</div>
+
+  <!-- EXPORT -->
+  <button class="filter-apply-btn" onclick="exportarExcel()" style="background:#f0f0e8;border:1px solid #c8c8b8;color:#1a1a1a;font-weight:700;letter-spacing:0.3px;margin-left:4px;padding:5px 16px;">
+    📥 Exportar a Excel
+  </button>
 
   <!-- ERROR -->
   <div id="filter-error-msg" class="filter-error-msg" style="display:none"></div>
@@ -1093,6 +1099,110 @@ function limpiarFiltros() {
   document.getElementById('filter-status-badge').textContent = 'Corte: 28/02/2026 · Todos los grupos';
   document.getElementById('lbl-filtro').textContent = 'Todos los grupos etarios';
   selectAll();
+}
+
+// ═══════════════════════════════════════════
+// EXPORTAR A EXCEL
+// ═══════════════════════════════════════════
+function exportarExcel() {
+  const wb = XLSX.utils.book_new();
+  const now = new Date();
+  const fechaExport = now.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const horaExport  = now.toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+
+  // ── HOJA 1: Grupos de Edad (selección activa) ──
+  const sel = DATA.age_order.filter(g => selectedAges.has(g));
+  let totH=0, totM=0, totE=0, totI=0, totT=0;
+  const edadRows = [
+    ['CESFAM Violeta Parra · Distribución por Grupo de Edad'],
+    [`Fecha de corte: 28/02/2026  |  Exportado: ${fechaExport} ${horaExport}  |  Autor: Rodrigo Villalobos R. | rodrigovillalobos1978@gmail.com`],
+    [],
+    ['Grupo de Edad','Hombre','Mujer','Extranjero','Intersex','Total','% del Padrón']
+  ];
+  sel.forEach(g => {
+    const d = DATA.age_groups[g];
+    totH+=d.Hombre; totM+=d.Mujer; totE+=d.Extranjero; totI+=d.Intersex; totT+=d.Total;
+    edadRows.push([g, d.Hombre, d.Mujer, d.Extranjero, d.Intersex||0, d.Total,
+      parseFloat((d.Total/DATA.total*100).toFixed(1))]);
+  });
+  edadRows.push([]);
+  edadRows.push(['TOTAL SELECCIÓN', totH, totM, totE, totI, totT,
+    parseFloat((totT/DATA.total*100).toFixed(1))]);
+  edadRows.push(['PADRÓN TOTAL', DATA.total, '', '', '', DATA.total, 100]);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(edadRows);
+  // Anchos
+  ws1['!cols'] = [{wch:18},{wch:10},{wch:10},{wch:12},{wch:10},{wch:10},{wch:14}];
+  // Merge título
+  ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Grupos de Edad');
+
+  // ── HOJA 2: Por Sector ──
+  const secRows = [
+    ['CESFAM Violeta Parra · Distribución por Sector'],
+    [`Fecha de corte: 28/02/2026  |  Exportado: ${fechaExport} ${horaExport}  |  Autor: Rodrigo Villalobos R. | rodrigovillalobos1978@gmail.com`],
+    [],
+    ['Sector','Total','Hombres','Mujeres','Extranjeros','% del Total']
+  ];
+  let sTotT=0, sTotH=0, sTotM=0, sTotE=0;
+  Object.entries(DATA.sectors).sort((a,b)=>b[1].total-a[1].total).forEach(([name,d])=>{
+    sTotT+=d.total; sTotH+=d.hombre; sTotM+=d.mujer; sTotE+=d.extranjero;
+    secRows.push([name, d.total, d.hombre, d.mujer, d.extranjero,
+      parseFloat((d.total/DATA.total*100).toFixed(1))]);
+  });
+  secRows.push([]);
+  secRows.push(['TOTAL', sTotT, sTotH, sTotM, sTotE, 100]);
+
+  const ws2 = XLSX.utils.aoa_to_sheet(secRows);
+  ws2['!cols'] = [{wch:22},{wch:10},{wch:10},{wch:10},{wch:13},{wch:13}];
+  ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Por Sector');
+
+  // ── HOJA 3: Extranjeros ──
+  const extRows = [
+    ['CESFAM Violeta Parra · Población Extranjera Inscrita'],
+    [`Fecha de corte: 28/02/2026  |  Exportado: ${fechaExport} ${horaExport}  |  Autor: Rodrigo Villalobos R. | rodrigovillalobos1978@gmail.com`],
+    [],
+    ['Ranking','Nacionalidad','Total','% del Total Extranjeros']
+  ];
+  DATA.nationalities.forEach((n,i)=>{
+    extRows.push([i+1, n.name, n.total,
+      parseFloat((n.total/DATA.total_extran*100).toFixed(1))]);
+  });
+  extRows.push([]);
+  extRows.push(['','TOTAL EXTRANJEROS', DATA.total_extran, 100]);
+  extRows.push(['','% sobre padrón total', parseFloat((DATA.total_extran/DATA.total*100).toFixed(1)), '']);
+
+  const ws3 = XLSX.utils.aoa_to_sheet(extRows);
+  ws3['!cols'] = [{wch:10},{wch:22},{wch:10},{wch:24}];
+  ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Extranjeros');
+
+  // ── HOJA 4: KPIs Resumen ──
+  const kpiRows = [
+    ['CESFAM Violeta Parra · Resumen Ejecutivo'],
+    [`Fecha de corte: 28/02/2026  |  Exportado: ${fechaExport} ${horaExport}  |  Autor: Rodrigo Villalobos R. | rodrigovillalobos1978@gmail.com`],
+    [],
+    ['Indicador','Valor','%'],
+    ['Total Inscritos', DATA.total, 100],
+    ['Hombres', DATA.age_groups ? Object.values(DATA.age_groups).reduce((s,d)=>s+d.Hombre,0) : 22622,
+      parseFloat((22622/DATA.total*100).toFixed(1))],
+    ['Mujeres',  Object.values(DATA.age_groups).reduce((s,d)=>s+d.Mujer,0),
+      parseFloat((29995/DATA.total*100).toFixed(1))],
+    ['Extranjeros', DATA.total_extran, parseFloat((DATA.total_extran/DATA.total*100).toFixed(1))],
+    [],
+    ['Filtro activo (hoja Grupos de Edad)',
+      sel.length < DATA.age_order.length ? `${sel.length} grupos seleccionados` : 'Todos los grupos', ''],
+    ['Grupos incluidos en exportación', sel.join(', '), '']
+  ];
+  const ws4 = XLSX.utils.aoa_to_sheet(kpiRows);
+  ws4['!cols'] = [{wch:36},{wch:18},{wch:10}];
+  ws4['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Resumen');
+
+  // Descargar
+  const fileName = `PoblacionInscrita_CESFAM_VioletaParra_Corte28022026.xlsx`;
+  XLSX.writeFile(wb, fileName);
 }
 
 // ═══════════════════════════════════════════
