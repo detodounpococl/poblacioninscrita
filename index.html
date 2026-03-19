@@ -306,10 +306,93 @@
   .nat-bar { height: 100%; border-radius: 2px; background: var(--extran); }
   .nat-num { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; color: var(--extran); width: 50px; text-align: right; }
 
+  /* FILTER PANEL */
   /* NO DATA */
   .no-data {
     text-align: center; padding: 32px;
     color: var(--text3); font-size: 13px;
+  }
+
+  /* FILTER BAR */
+  .filter-bar {
+    background: linear-gradient(135deg, #161b22 0%, #1a1f28 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .filter-divider {
+    width: 1px; height: 28px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+  .filter-label {
+    font-size: 11px; color: var(--text2); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.7px; white-space: nowrap;
+  }
+  .filter-mini-label {
+    font-size: 10px; color: var(--text3); font-weight: 600;
+    white-space: nowrap;
+  }
+  .filter-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 5px 9px;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: border-color 0.2s;
+  }
+  .filter-input:focus { outline: none; border-color: var(--accent); }
+  .filter-input.error { border-color: var(--accent3) !important; box-shadow: 0 0 0 2px rgba(247,129,102,0.15); }
+  .filter-input-date { width: 130px; }
+  .filter-input-age { width: 68px; }
+  .filter-sep { color: var(--text3); font-size: 12px; font-weight: 700; }
+  .filter-apply-btn {
+    background: rgba(31,156,240,0.14);
+    border: 1px solid rgba(31,156,240,0.35);
+    color: var(--accent);
+    padding: 5px 14px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 700;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .filter-apply-btn:hover { background: rgba(31,156,240,0.25); border-color: var(--accent); }
+  .filter-clear-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text3); padding: 5px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 11px; font-weight: 600;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .filter-clear-btn:hover { border-color: var(--text3); color: var(--text2); }
+  .filter-error-msg {
+    display: none;
+    background: rgba(247,129,102,0.1);
+    border: 1px solid rgba(247,129,102,0.35);
+    color: var(--accent3);
+    font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 6px;
+    width: 100%; margin-top: 4px;
+  }
+  .filter-status-badge {
+    margin-left: auto;
+    background: rgba(63,185,80,0.1);
+    border: 1px solid rgba(63,185,80,0.3);
+    color: var(--accent2);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
   }
 
   /* RESPONSIVE */
@@ -317,6 +400,8 @@
     .kpi-row { grid-template-columns: 1fr 1fr; }
     .chart-grid { grid-template-columns: 1fr; }
     .nat-grid { grid-template-columns: 1fr; }
+    .filter-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .filter-divider { display: none; }
   }
 </style>
 </head>
@@ -326,32 +411,61 @@
   <div class="header-icon">🏥</div>
   <div class="header-info">
     <h1>CESFAM Violeta Parra · Dashboard Población Inscrita</h1>
-    <p>S.S. Ñuble · Chillán · Corte: Febrero 2026 · Datos agregados — sin información individual</p>
+    <p>S.S. Ñuble · Chillán · Fecha de corte: <b>28/02/2026</b> · <span id="lbl-filtro">Todos los grupos etarios</span></p>
   </div>
-  <div class="header-badge">CONFIDENCIAL</div>
+  <div class="header-badge" id="header-datetime" style="font-size:11px"></div>
 </header>
+
+<!-- FILTRO EDAD -->
+<div class="filter-bar">
+
+  <!-- RANGO EDAD -->
+  <div class="filter-section">
+    <span class="filter-label">🎂 Rango de Edad</span>
+    <span class="filter-mini-label">De</span>
+    <input type="number" id="edadMin" class="filter-input filter-input-age"
+           placeholder="0" min="0" max="150">
+    <span class="filter-mini-label">a</span>
+    <input type="number" id="edadMax" class="filter-input filter-input-age"
+           placeholder="150" min="0" max="150">
+    <span class="filter-mini-label">años</span>
+  </div>
+
+  <div class="filter-divider"></div>
+
+  <!-- BOTONES -->
+  <button class="filter-apply-btn" onclick="aplicarFiltros()">▶ Aplicar</button>
+  <button class="filter-clear-btn" onclick="limpiarFiltros()">↺ Limpiar</button>
+
+  <!-- STATUS -->
+  <div id="filter-status-badge" class="filter-status-badge">Corte: 28/02/2026 · Todos los grupos</div>
+
+  <!-- ERROR -->
+  <div id="filter-error-msg" class="filter-error-msg" style="display:none"></div>
+</div>
+
 
 <!-- KPIs -->
 <div class="kpi-row">
   <div class="kpi" style="--kpi-color: var(--accent)">
     <div class="kpi-label">Total Inscritos</div>
-    <div class="kpi-value">52.627</div>
-    <div class="kpi-sub">Activos · Todos los sectores</div>
+    <div class="kpi-value" id="kpi-total">52.627</div>
+    <div class="kpi-sub" id="kpi-total-sub">Activos · Todos los sectores</div>
   </div>
   <div class="kpi" style="--kpi-color: var(--hombre)">
     <div class="kpi-label">Hombres</div>
     <div class="kpi-value" id="kpi-hombres">22.622</div>
-    <div class="kpi-sub">43,0% del total</div>
+    <div class="kpi-sub" id="kpi-hombres-sub">43,0% del total</div>
   </div>
   <div class="kpi" style="--kpi-color: var(--mujer)">
     <div class="kpi-label">Mujeres</div>
     <div class="kpi-value" id="kpi-mujeres">29.995</div>
-    <div class="kpi-sub">57,0% del total</div>
+    <div class="kpi-sub" id="kpi-mujeres-sub">57,0% del total</div>
   </div>
   <div class="kpi" style="--kpi-color: var(--extran)">
     <div class="kpi-label">Extranjeros</div>
-    <div class="kpi-value">3.303</div>
-    <div class="kpi-sub">6,3% del total inscrito</div>
+    <div class="kpi-value" id="kpi-extran">3.303</div>
+    <div class="kpi-sub" id="kpi-extran-sub">6,3% del total inscrito</div>
   </div>
 </div>
 
@@ -655,6 +769,18 @@ function renderAgeTable() {
     <td style="color:var(--text2)">${pct(totT, grand)}</td>
   </tr>`;
 
+  // — Actualizar KPIs —
+  const esFiltrado = sel.length < DATA.age_order.length;
+  const subLabel = esFiltrado ? `Filtro activo · ${sel.length} grupo(s) seleccionado(s)` : 'Activos · Todos los sectores';
+  document.getElementById('kpi-total').textContent   = fmt(totT);
+  document.getElementById('kpi-total-sub').textContent = subLabel;
+  document.getElementById('kpi-hombres').textContent = fmt(totH);
+  document.getElementById('kpi-hombres-sub').textContent = totT > 0 ? `${(totH/totT*100).toFixed(1)}% del total` : '—';
+  document.getElementById('kpi-mujeres').textContent  = fmt(totM);
+  document.getElementById('kpi-mujeres-sub').textContent = totT > 0 ? `${(totM/totT*100).toFixed(1)}% del total` : '—';
+  document.getElementById('kpi-extran').textContent   = fmt(totE);
+  document.getElementById('kpi-extran-sub').textContent = totT > 0 ? `${(totE/totT*100).toFixed(1)}% del total inscrito` : '—';
+
   // total bar
   const bar = document.getElementById('total-bar');
   bar.innerHTML = `
@@ -868,6 +994,105 @@ function renderExtranCharts() {
     `;
     extSecList.appendChild(el);
   });
+}
+
+// ═══════════════════════════════════════════
+// FECHA/HORA EN HEADER
+// ═══════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const opts = { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' };
+  document.getElementById('header-datetime').textContent = now.toLocaleString('es-CL', opts);
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ═══════════════════════════════════════════
+// MAPEO GRUPOS ETARIOS → RANGO EN AÑOS
+// ═══════════════════════════════════════════
+const AGE_GROUP_RANGES = {
+  "0-1 Mes":    {min:0,  max:0},
+  "2-5 Meses":  {min:0,  max:0},
+  "6-11 Meses": {min:0,  max:0},
+  "1 Año":      {min:1,  max:1},
+  "2-5 Años":   {min:2,  max:5},
+  "6-9 Años":   {min:6,  max:9},
+  "10-14 Años": {min:10, max:14},
+  "15-19 Años": {min:15, max:19},
+  "20-24 Años": {min:20, max:24},
+  "25-34 Años": {min:25, max:34},
+  "35-44 Años": {min:35, max:44},
+  "45-54 Años": {min:45, max:54},
+  "55-64 Años": {min:55, max:64},
+  "65-69 Años": {min:65, max:69},
+  "70+ Años":   {min:70, max:150}
+};
+
+// ═══════════════════════════════════════════
+// FILTRO POR EDAD
+// ═══════════════════════════════════════════
+function aplicarFiltros() {
+  const eMinRaw = document.getElementById('edadMin').value.trim();
+  const eMaxRaw = document.getElementById('edadMax').value.trim();
+  const eMin = eMinRaw === '' ? 0   : parseInt(eMinRaw);
+  const eMax = eMaxRaw === '' ? 150 : parseInt(eMaxRaw);
+  const eMinEl = document.getElementById('edadMin');
+  const eMaxEl = document.getElementById('edadMax');
+  const errEl  = document.getElementById('filter-error-msg');
+
+  eMinEl.classList.remove('error'); eMaxEl.classList.remove('error');
+  errEl.style.display = 'none';
+
+  if (eMin > eMax) {
+    eMinEl.classList.add('error'); eMaxEl.classList.add('error');
+    errEl.textContent = '⚠ La edad mínima no puede ser mayor que la máxima.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // Filtrar grupos que intersectan el rango
+  const matching = new Set();
+  DATA.age_order.forEach(g => {
+    const r = AGE_GROUP_RANGES[g];
+    if (r.max >= eMin && r.min <= eMax) matching.add(g);
+  });
+
+  if (matching.size === 0) {
+    errEl.textContent = '⚠ Ningún grupo etario coincide con ese rango.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  selectedAges = matching;
+  document.querySelectorAll('.age-chip').forEach(c => {
+    c.classList.toggle('selected', selectedAges.has(c.dataset.group));
+  });
+
+  // Actualizar badge y header
+  const badgeTxt = (eMinRaw !== '' || eMaxRaw !== '')
+    ? `Corte: 28/02/2026 · Edad ${eMin}–${eMax} años`
+    : 'Corte: 28/02/2026 · Todos los grupos';
+  document.getElementById('filter-status-badge').textContent = badgeTxt;
+  document.getElementById('lbl-filtro').textContent =
+    (eMinRaw !== '' || eMaxRaw !== '') ? `Edad ${eMin}–${eMax} años` : 'Todos los grupos etarios';
+
+  // Ir a pestaña edad
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-edad').classList.add('active');
+  document.querySelector('.tab-btn').classList.add('active');
+
+  renderAgeTable();
+}
+
+function limpiarFiltros() {
+  document.getElementById('edadMin').value = '';
+  document.getElementById('edadMax').value = '';
+  ['edadMin','edadMax'].forEach(id => document.getElementById(id).classList.remove('error'));
+  document.getElementById('filter-error-msg').style.display = 'none';
+  document.getElementById('filter-status-badge').textContent = 'Corte: 28/02/2026 · Todos los grupos';
+  document.getElementById('lbl-filtro').textContent = 'Todos los grupos etarios';
+  selectAll();
 }
 
 // ═══════════════════════════════════════════
