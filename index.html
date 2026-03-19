@@ -396,6 +396,80 @@
     white-space: nowrap;
   }
 
+  /* MODAL IMPORTAR */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    width: 420px; max-width: 95vw;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+  }
+  .modal-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 20px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label {
+    display: block; font-size: 11px; color: var(--text2);
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 6px;
+  }
+  .modal-input {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 9px 12px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-input.error { border-color: var(--accent3); }
+  .modal-msg {
+    font-size: 11px; min-height: 16px; margin-top: 6px;
+    color: var(--accent3); font-weight: 600;
+  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .modal-btn-cancel {
+    background: none; border: 1px solid var(--border);
+    color: var(--text2); padding: 8px 18px; border-radius: 8px;
+    cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    transition: all 0.15s;
+  }
+  .modal-btn-cancel:hover { border-color: var(--text2); color: var(--text); }
+  .modal-btn-ok {
+    background: rgba(31,156,240,0.15);
+    border: 1px solid rgba(31,156,240,0.4);
+    color: var(--accent); padding: 8px 22px; border-radius: 8px;
+    cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px; font-weight: 700;
+    transition: all 0.15s;
+  }
+  .modal-btn-ok:hover { background: rgba(31,156,240,0.25); }
+  .modal-progress {
+    display: none; background: var(--surface2);
+    border-radius: 8px; padding: 14px 16px;
+    font-size: 12px; color: var(--text2); margin-top: 12px;
+    border: 1px solid var(--border);
+  }
+  .modal-progress.show { display: block; }
+  .progress-bar-wrap {
+    height: 4px; background: var(--border);
+    border-radius: 2px; margin-top: 8px; overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; background: var(--accent);
+    border-radius: 2px; transition: width 0.3s ease;
+    width: 0%;
+  }
+
   /* RESPONSIVE */
   @media (max-width: 900px) {
     .kpi-row { grid-template-columns: 1fr 1fr; }
@@ -437,6 +511,9 @@
   <!-- BOTONES -->
   <button class="filter-apply-btn" onclick="aplicarFiltros()">▶ Aplicar</button>
   <button class="filter-clear-btn" onclick="limpiarFiltros()">↺ Limpiar</button>
+  <button class="filter-clear-btn" onclick="abrirModalImportar()" style="border-color:rgba(31,156,240,0.4);color:var(--accent);">
+    📂 Importar Datos
+  </button>
 
   <!-- STATUS -->
   <div id="filter-status-badge" class="filter-status-badge">Corte: 28/02/2026 · Todos los grupos</div>
@@ -601,6 +678,36 @@
   </div>
 
 </div><!-- /content -->
+
+<!-- MODAL IMPORTAR -->
+<div class="modal-overlay" id="modal-importar">
+  <div class="modal-box">
+    <div class="modal-title">📂 Importar Datos desde Archivo</div>
+    <div class="modal-sub">Solo archivos exportados desde el sistema RAYEN/MINSAL (formato "Informe Inscritos/Adscritos"). Requiere clave de autorización.</div>
+
+    <div class="modal-field">
+      <label>Clave de Autorización</label>
+      <input type="password" id="modal-clave" class="modal-input" placeholder="Ingrese la clave..." autocomplete="off">
+      <div class="modal-msg" id="modal-msg-clave"></div>
+    </div>
+
+    <div class="modal-field">
+      <label>Archivo .xlsx</label>
+      <input type="file" id="modal-file" class="modal-input" accept=".xlsx" style="padding:7px 10px;cursor:pointer;">
+      <div class="modal-msg" id="modal-msg-file"></div>
+    </div>
+
+    <div class="modal-progress" id="modal-progress">
+      <span id="modal-progress-txt">Procesando archivo...</span>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="modal-progress-bar"></div></div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn-cancel" onclick="cerrarModalImportar()">Cancelar</button>
+      <button class="modal-btn-ok" id="modal-btn-ok" onclick="procesarImportacion()">Cargar y Actualizar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════
@@ -1203,6 +1310,259 @@ function exportarExcel() {
   // Descargar
   const fileName = `PoblacionInscrita_CESFAM_VioletaParra_Corte28022026.xlsx`;
   XLSX.writeFile(wb, fileName);
+}
+
+// ═══════════════════════════════════════════
+// MODAL IMPORTAR
+// ═══════════════════════════════════════════
+const IMPORT_KEY = 'Zoe2023@';
+
+function abrirModalImportar() {
+  document.getElementById('modal-importar').classList.add('open');
+  document.getElementById('modal-clave').value = '';
+  document.getElementById('modal-file').value  = '';
+  document.getElementById('modal-msg-clave').textContent = '';
+  document.getElementById('modal-msg-file').textContent  = '';
+  document.getElementById('modal-progress').classList.remove('show');
+  document.getElementById('modal-clave').classList.remove('error');
+  document.getElementById('modal-file').classList.remove('error');
+  setTimeout(() => document.getElementById('modal-clave').focus(), 100);
+}
+function cerrarModalImportar() {
+  document.getElementById('modal-importar').classList.remove('open');
+}
+// Cerrar al click en overlay
+document.getElementById('modal-importar').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModalImportar();
+});
+
+// ─── Clasificar grupo etario ───
+function getAgeGroup(anios, meses) {
+  if (anios === 0) {
+    if (meses <= 1) return '0-1 Mes';
+    if (meses <= 5) return '2-5 Meses';
+    return '6-11 Meses';
+  }
+  if (anios === 1)  return '1 Año';
+  if (anios <= 5)   return '2-5 Años';
+  if (anios <= 9)   return '6-9 Años';
+  if (anios <= 14)  return '10-14 Años';
+  if (anios <= 19)  return '15-19 Años';
+  if (anios <= 24)  return '20-24 Años';
+  if (anios <= 34)  return '25-34 Años';
+  if (anios <= 44)  return '35-44 Años';
+  if (anios <= 54)  return '45-54 Años';
+  if (anios <= 64)  return '55-64 Años';
+  if (anios <= 69)  return '65-69 Años';
+  return '70+ Años';
+}
+
+// ─── Normalizar sector ───
+function normalizarSector(s) {
+  if (!s) return 'No Informado';
+  const v = s.toString().trim();
+  if (/sector\s*1\b/i.test(v))  return 'Sector 1';
+  if (/sector\s*2\b/i.test(v))  return 'Sector 2';
+  if (/sector\s*3/i.test(v))    return 'Sector 3 (Cecof)';
+  if (/sector\s*4\b/i.test(v))  return 'Sector 4';
+  if (/sector\s*5\b/i.test(v))  return 'Sector 5';
+  if (/sector\s*6\b/i.test(v))  return 'Sector 6';
+  if (/rural/i.test(v))         return 'Sector Rural';
+  if (/transversal/i.test(v))   return 'Sector Transversal';
+  if (v === '' || /no inf/i.test(v)) return 'No Informado';
+  return v;
+}
+
+// ─── Parsear fecha dd/MM/yyyy ───
+function parsefecha(v) {
+  if (!v) return null;
+  const s = v.toString().trim();
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));
+}
+
+// ─── Setear progreso ───
+function setProgress(txt, pct) {
+  document.getElementById('modal-progress-txt').textContent = txt;
+  document.getElementById('modal-progress-bar').style.width = pct + '%';
+}
+
+// ─── Procesar importación ───
+function procesarImportacion() {
+  const clave = document.getElementById('modal-clave').value;
+  const file  = document.getElementById('modal-file').files[0];
+  const msgC  = document.getElementById('modal-msg-clave');
+  const msgF  = document.getElementById('modal-msg-file');
+  let ok = true;
+
+  // Validar clave
+  msgC.textContent = '';
+  document.getElementById('modal-clave').classList.remove('error');
+  if (clave !== IMPORT_KEY) {
+    msgC.textContent = '⚠ Clave incorrecta.';
+    document.getElementById('modal-clave').classList.add('error');
+    ok = false;
+  }
+  // Validar archivo
+  msgF.textContent = '';
+  document.getElementById('modal-file').classList.remove('error');
+  if (!file) {
+    msgF.textContent = '⚠ Seleccione un archivo .xlsx.';
+    document.getElementById('modal-file').classList.add('error');
+    ok = false;
+  }
+  if (!ok) return;
+
+  // Mostrar progreso
+  const prog = document.getElementById('modal-progress');
+  prog.classList.add('show');
+  document.getElementById('modal-btn-ok').disabled = true;
+  setProgress('Leyendo archivo...', 10);
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      setProgress('Parseando hojas...', 25);
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+      // Encontrar fila de encabezados (contiene "SEXO")
+      let headerRow = -1;
+      for (let i = 0; i < Math.min(rows.length, 30); i++) {
+        if (rows[i].some(c => String(c).trim().toUpperCase() === 'SEXO')) {
+          headerRow = i; break;
+        }
+      }
+      if (headerRow < 0) {
+        msgF.textContent = '⚠ No se encontró la cabecera del archivo. Verifique que sea el informe correcto.';
+        prog.classList.remove('show');
+        document.getElementById('modal-btn-ok').disabled = false;
+        return;
+      }
+
+      // Índices de columnas por nombre
+      const hdrs = rows[headerRow].map(h => String(h).trim().toUpperCase());
+      const COL = {
+        SEXO:       hdrs.indexOf('SEXO'),
+        NAC:        hdrs.indexOf('NACIONALIDAD'),
+        EDAD_A:     hdrs.indexOf('EDAD AÑOS'),
+        EDAD_M:     hdrs.indexOf('EDAD MESES'),
+        SECTOR:     hdrs.indexOf('SECTOR'),
+        FECHA_INS:  hdrs.indexOf('FECHA DE INSCRIPCION'),
+        FECHA_NAC:  hdrs.indexOf('FECHA DE NACIMIENTO'),
+      };
+
+      setProgress('Procesando registros...', 40);
+
+      // Estructuras de acumulación
+      const ageGroupsNew = {};
+      DATA.age_order.forEach(g => {
+        ageGroupsNew[g] = {Hombre:0, Mujer:0, Extranjero:0, Intersex:0, 'No Informado':0, Total:0};
+      });
+      const sectorsNew = {};
+      const natCount   = {};
+      let totalRec = 0, totalH = 0, totalM = 0, totalE = 0;
+
+      const dataRows = rows.slice(headerRow + 1);
+      const N = dataRows.length;
+
+      dataRows.forEach((row, idx) => {
+        if (row.every(c => c === '' || c === null || c === undefined)) return;
+
+        const sexo  = String(row[COL.SEXO]  || '').trim();
+        const nac   = String(row[COL.NAC]   || '').trim();
+        const secRaw= String(row[COL.SECTOR]|| '').trim();
+        const eAnios= parseInt(row[COL.EDAD_A]) || 0;
+        const eMeses= parseInt(row[COL.EDAD_M]) || 0;
+
+        const grupo  = getAgeGroup(eAnios, eMeses);
+        const sector = normalizarSector(secRaw);
+        const esExt  = !/chilena/i.test(nac) && nac !== '';
+
+        // Acumular grupo etario
+        if (ageGroupsNew[grupo]) {
+          ageGroupsNew[grupo].Total++;
+          if      (/hombre|masculin/i.test(sexo))  { ageGroupsNew[grupo].Hombre++; }
+          else if (/mujer|femenin/i.test(sexo))     { ageGroupsNew[grupo].Mujer++;  }
+          else if (/intersex/i.test(sexo))          { ageGroupsNew[grupo].Intersex++; }
+          else                                       { ageGroupsNew[grupo]['No Informado']++; }
+          if (esExt) ageGroupsNew[grupo].Extranjero++;
+        }
+
+        // Acumular sector
+        if (!sectorsNew[sector]) sectorsNew[sector] = {total:0, hombre:0, mujer:0, extranjero:0};
+        sectorsNew[sector].total++;
+        if (/hombre|masculin/i.test(sexo))       sectorsNew[sector].hombre++;
+        else if (/mujer|femenin/i.test(sexo))    sectorsNew[sector].mujer++;
+        if (esExt) sectorsNew[sector].extranjero++;
+
+        // Acumular nacionalidades extranjeras
+        if (esExt) { natCount[nac] = (natCount[nac] || 0) + 1; }
+
+        // Totales globales
+        totalRec++;
+        if (/hombre|masculin/i.test(sexo)) totalH++;
+        else if (/mujer|femenin/i.test(sexo)) totalM++;
+        if (esExt) totalE++;
+
+        // Actualizar barra cada 5000 registros
+        if (idx % 5000 === 0) {
+          const pct = 40 + Math.round((idx/N)*50);
+          setProgress(`Procesando registros (${idx.toLocaleString('es-CL')} / ${N.toLocaleString('es-CL')})...`, pct);
+        }
+      });
+
+      setProgress('Actualizando dashboard...', 92);
+
+      // Top 15 nacionalidades
+      const natSorted = Object.entries(natCount)
+        .sort((a,b) => b[1]-a[1])
+        .slice(0,15)
+        .map(([name,total]) => ({name, total}));
+
+      // f_sector para extranjeros
+      const fSector = {};
+      Object.entries(sectorsNew).forEach(([k,v]) => { fSector[k] = v.extranjero; });
+
+      // Obtener fecha de corte del archivo (fila 11 = índice 10)
+      let fechaCorteArchivo = '—';
+      try {
+        const fcRaw = rows[10] && rows[10][1] ? String(rows[10][1]).trim() : '';
+        if (fcRaw) fechaCorteArchivo = fcRaw;
+      } catch(e) {}
+
+      // Actualizar DATA global
+      DATA.age_groups   = ageGroupsNew;
+      DATA.sectors      = sectorsNew;
+      DATA.nationalities= natSorted;
+      DATA.f_sector     = fSector;
+      DATA.total        = totalRec;
+      DATA.total_extran = totalE;
+
+      // Actualizar UI
+      document.getElementById('filter-status-badge').textContent =
+        `Datos importados · Corte: ${fechaCorteArchivo} · ${totalRec.toLocaleString('es-CL')} registros`;
+      document.querySelector('header p').innerHTML =
+        `S.S. Ñuble · Chillán · Fecha de corte: <b>${fechaCorteArchivo}</b> · <span id="lbl-filtro">Todos los grupos etarios</span>`;
+
+      selectAll();
+      setProgress(`✅ ${totalRec.toLocaleString('es-CL')} registros cargados correctamente.`, 100);
+
+      setTimeout(() => {
+        cerrarModalImportar();
+        document.getElementById('modal-btn-ok').disabled = false;
+      }, 1800);
+
+    } catch(err) {
+      document.getElementById('modal-msg-file').textContent =
+        '⚠ Error al leer el archivo: ' + err.message;
+      document.getElementById('modal-progress').classList.remove('show');
+      document.getElementById('modal-btn-ok').disabled = false;
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ═══════════════════════════════════════════
